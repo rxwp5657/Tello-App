@@ -3,7 +3,7 @@ package dualshock
 import (
 	"time"
 
-	"github.com/RXWP5657/DroneProject/tello"
+	"github.com/RXWP5657/DroneProject/Tello-App/tello"
 	"gobot.io/x/gobot"
 	"gobot.io/x/gobot/platforms/joystick"
 )

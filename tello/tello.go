@@ -7,9 +7,99 @@ import (
 )
 
 const (
-	ip      = "192.168.10.1"      //Dron IP
-	cmdPort = "192.168.10.1:8889" //Send Command and Receive Response Port
-	strPort = "0.0.0.0:11111"     //Receive Video Stream Port
+	ip      = "192.168.10.1"       //Dron IP
+	cmdPort = "192.168.10.1:8889"  //Send Command and Receive Response Port
+	strPort = "192.168.10.1:11111" //Receive Video Stream Port
+)
+
+//Command allows to send a instruction to the drone
+type Command int
+
+const (
+
+	//InitCommand sets the drone into dev mode
+	InitCommand Command = 0
+
+	//Takeoff tells the drone to take off
+	Takeoff Command = 1
+
+	//Land tells the drone to land
+	Land Command = 2
+
+	//StreamOn tells the drone to start streaming video
+	StreamOn Command = 3
+
+	//StreamOff tells the drone to stop streaming video
+	StreamOff Command = 4
+
+	//Emergency tells the drone to stop all functions
+	Emergency Command = 5
+
+	//Up tells the drone to go up n units
+	Up Command = 6
+
+	//Down tells the drone to go down n units
+	Down Command = 7
+
+	//Left tells the drone to go left n units
+	Left Command = 8
+
+	//Right tells the drone to go right n units
+	Right Command = 9
+
+	//Forward tells the drone to go forward n units
+	Forward Command = 10
+
+	//Back tells the drone to go backwards n units
+	Back Command = 11
+
+	//RotateC tells the drone to rotate clockwise n degrees
+	RotateC Command = 12
+
+	//RotateCC tells the drone to rotate counter clockwise n degrees
+	RotateCC Command = 13
+
+	//FlipL tells the drone to flip to the left
+	FlipL Command = 14
+
+	//FlipR tells the drone to flip to the right
+	FlipR Command = 15
+
+	//FlipF tells the drone to flip forwards
+	FlipF Command = 16
+
+	//FlipB tells the drone to flip backwards
+	FlipB Command = 17
+
+	//Speed command gets the drone's speed
+	Speed Command = 19
+
+	//Battery commmand gets the drone battery level
+	Battery Command = 20
+
+	//Time command gets the drone flying time
+	Time Command = 21
+
+	//WiFi command gets the drone wifi signal
+	WiFi Command = 22
+
+	//Height command gets the drone height
+	Height Command = 23
+
+	//Temp command gets the temperature of the flying area
+	Temp Command = 24
+
+	//Attitude command gets the yawn, pitch and roll data
+	Attitude Command = 25
+
+	//Baro command gets barometric data from the drone
+	Baro Command = 26
+
+	//Acceleration command gets the acceleration data from the drone
+	Acceleration Command = 27
+
+	//TOF command gets distance value from TOF
+	TOF Command = 28
 )
 
 //Drone structure that represents the drone
@@ -30,7 +120,7 @@ func Init() (Drone, error) {
 
 	telloDrone.cmdConn = cmdConn
 
-	initCmdMode(cmdConn)
+	sendCommand("command", cmdConn)
 
 	strConn, strErr := net.Dial("udp", strPort)
 	if strErr != nil {
@@ -42,13 +132,87 @@ func Init() (Drone, error) {
 	return telloDrone, nil
 }
 
-// ReleaseDrone commands stops all connections to the drone
+// ReleaseDrone command stops all connections to the drone
 func (d *Drone) ReleaseDrone() {
 	d.cmdConn.Close()
 	d.strConn.Close()
 }
 
-func handleResponse(c net.Conn) {
+//doCommand sends the message 'command' with the parameters 'param' to the drone d
+func (d Drone) doCommand(cmd Command, param string) {
+	switch cmd {
+	case InitCommand:
+		sendCommand("command", d.cmdConn)
+	case Takeoff:
+		sendCommand("takeoff", d.cmdConn)
+	case Land:
+		sendCommand("land", d.cmdConn)
+	case StreamOn:
+		sendCommand("streamon", d.cmdConn)
+	case StreamOff:
+		sendCommand("streamoff", d.cmdConn)
+	case Emergency:
+		sendCommand("emergency", d.cmdConn)
+	case Up:
+		sendCommand("up "+param, d.cmdConn)
+	case Down:
+		sendCommand("down "+param, d.cmdConn)
+	case Left:
+		sendCommand("left "+param, d.cmdConn)
+	case Right:
+		sendCommand("rigth "+param, d.cmdConn)
+	case Forward:
+		sendCommand("forward "+param, d.cmdConn)
+	case Back:
+		sendCommand("back "+param, d.cmdConn)
+	case RotateC:
+		sendCommand("cw "+param, d.cmdConn)
+	case RotateCC:
+		sendCommand("ccw "+param, d.cmdConn)
+	case FlipL:
+		sendCommand("flip l", d.cmdConn)
+	case FlipR:
+		sendCommand("flip r", d.cmdConn)
+	case FlipF:
+		sendCommand("flip f", d.cmdConn)
+	case FlipB:
+		sendCommand("flip b", d.cmdConn)
+	case Speed:
+		sendCommand("speed?", d.cmdConn)
+	case Battery:
+		sendCommand("battery", d.cmdConn)
+	case Time:
+		sendCommand("time?", d.cmdConn)
+	case WiFi:
+		sendCommand("wifi?", d.cmdConn)
+	case Height:
+		sendCommand("height?", d.cmdConn)
+	case Temp:
+		sendCommand("temp?", d.cmdConn)
+	case Attitude:
+		sendCommand("attitude?", d.cmdConn)
+	case Baro:
+		sendCommand("baro?", d.cmdConn)
+	case Acceleration:
+		sendCommand("acceleration?", d.cmdConn)
+	case TOF:
+		sendCommand("tof?", d.cmdConn)
+	default:
+
+	}
+}
+
+func sendCommand(cmd string, cn net.Conn) (string, error) {
+	_, err := fmt.Fprintf(cn, cmd)
+	if err != nil {
+		return "error", fmt.Errorf("couldn't send command because %s", err)
+	}
+	go HandleResponse(cn)
+	return cmd, nil
+}
+
+// HandleResponse prints to the console the result of the command (ok, err [drone], err [reader])
+func HandleResponse(c net.Conn) {
 	p := make([]byte, 2048)
 	_, err := bufio.NewReader(c).Read(p)
 	if err != nil {
@@ -57,163 +221,9 @@ func handleResponse(c net.Conn) {
 	fmt.Println(string(p))
 }
 
-func initCmdMode(c net.Conn) (string, error) {
-	return sendCommand("command", c)
-}
-
-//Emergency command set the drone into Emergency mode
-func (d Drone) Emergency() (string, error) {
-	return sendCommand("emergency", d.cmdConn)
-}
-
-//TakekOff command
-func (d Drone) TakekOff() (string, error) {
-	return sendCommand("takeoff", d.cmdConn)
-}
-
-//Land command
-func (d Drone) Land() (string, error) {
-	return sendCommand("land", d.cmdConn)
-}
-
-//Up command moves the drone up by Xcm (20cm default)
-func (d Drone) Up(x string) (string, error) {
-	return sendCommand(("up " + x), d.cmdConn)
-}
-
-//Down command moves the drone down by Xcm (20cm default)
-func (d Drone) Down(x string) (string, error) {
-	return sendCommand(("down " + x), d.cmdConn)
-}
-
-//Left command moves the drone to the left by Xcm (20cm default)
-func (d Drone) Left(x string) (string, error) {
-	return sendCommand(("left " + x), d.cmdConn)
-}
-
-//Right command moves the drone to the right by Xcm (20cm default)
-func (d Drone) Right(x string) (string, error) {
-	return sendCommand(("right " + x), d.cmdConn)
-}
-
-//Forward command moves the drone forward by Xcm (20cm default)
-func (d Drone) Forward(x string) (string, error) {
-	return sendCommand(("forward " + x), d.cmdConn)
-}
-
-//Back command moves the drone backwards by Xcm (20cm default)
-func (d Drone) Back(x string) (string, error) {
-	return sendCommand(("back " + x), d.cmdConn)
-}
-
-//RotateC command rotates the drone clockwise by N degrees (10 degrees default)
-func (d Drone) RotateC(degrees string) (string, error) {
-	return sendCommand(("cw " + degrees), d.cmdConn)
-}
-
-//RotateCC command rotates the drone counter clockwise by N degrees (10 degrees default)
-func (d Drone) RotateCC(degrees string) (string, error) {
-	return sendCommand(("ccw " + degrees), d.cmdConn)
-}
-
-//FlipL command flips the drone to the left
-func (d Drone) FlipL() (string, error) {
-	return sendCommand("flip l", d.cmdConn)
-}
-
-//FlipR command flips the drone to the right
-func (d Drone) FlipR() (string, error) {
-	return sendCommand("flip r", d.cmdConn)
-}
-
-//FlipF command flips the drone forwards
-func (d Drone) FlipF() (string, error) {
-	return sendCommand("flip f", d.cmdConn)
-}
-
-//FlipB command flips the drone to the left
-func (d Drone) FlipB() (string, error) {
-	return sendCommand("flip b", d.cmdConn)
-}
-
-//GoXYZ command sends the drone to the XYZ coordinate at some speed S
-func (d Drone) GoXYZ(x, y, z, speed string) (string, error) {
-	return sendCommand((x + " " + y + " " + z + " " + speed), d.cmdConn)
-}
-
-//Speed command sets the drone's speed
-func (d Drone) Speed(speed string) (string, error) {
-	return sendCommand(("speed " + speed), d.cmdConn)
-}
-
-//StartStreaming command starts video streaming
-func (d Drone) StartStreaming() (string, error) {
-	return sendCommand("streamon", d.cmdConn)
-}
-
-//EndStreaming command ends video streaming
-func (d Drone) EndStreaming() (string, error) {
-	return sendCommand("streamoff", d.cmdConn)
-}
-
-//GetSpeed command gets current speed
-func (d Drone) GetSpeed() (string, error) {
-	return sendCommand("speed?", d.cmdConn)
-}
-
-//GetBattery command gets battery level
-func (d Drone) GetBattery() (string, error) {
-	return sendCommand("battery?", d.cmdConn)
-}
-
-//GetTime command gets current flight time
-func (d Drone) GetTime() (string, error) {
-	return sendCommand("time?", d.cmdConn)
-}
-
-//GetHeight command gets current drone height
-func (d Drone) GetHeight() (string, error) {
-	return sendCommand("height?", d.cmdConn)
-}
-
-//GetTemp command gets the temperature
-func (d Drone) GetTemp() (string, error) {
-	return sendCommand("temp?", d.cmdConn)
-}
-
-//GetAtitude command get Pitch, Roll, Yaw
-func (d Drone) GetAtitude() (string, error) {
-	return sendCommand("atitude?", d.cmdConn)
-}
-
-//GetBaro command gets barometer data
-func (d Drone) GetBaro() (string, error) {
-	return sendCommand("baro?", d.cmdConn)
-}
-
-//GetAcceleration command gets the current acceleration
-func (d Drone) GetAcceleration() (string, error) {
-	return sendCommand("acceleration?", d.cmdConn)
-}
-
-//GetTOF command gets flight distance
-func (d Drone) GetTOF() (string, error) {
-	return sendCommand("tof?", d.cmdConn)
-}
-
-//GetWiFi command gets the signal to noise ratio
-func (d Drone) GetWiFi() (string, error) {
-	return sendCommand("wifi?", d.cmdConn)
-}
-
-func sendCommand(command string, c net.Conn) (string, error) {
-	fmt.Println(command)
-	_, err := fmt.Fprintf(c, command)
-	if err != nil {
-		return "none", fmt.Errorf("couldn't send command because %s", err)
+func (d Drone) CommandQueue(in chan Command, param string) {
+	for {
+		cmd := <-in
+		d.doCommand(cmd, param)
 	}
-
-	go handleResponse(c)
-
-	return "end", nil
 }
