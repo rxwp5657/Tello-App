@@ -18,34 +18,44 @@ type Controller struct {
 func BindController(d *tello.Drone) Controller {
 	adapter := joystick.NewAdaptor()
 	controller := joystick.NewDriver(adapter, "dualshock4")
-	cmd := func() {
 
+	in := make(chan tello.Command)
+	param := make(chan string)
+	go d.InputChan(in, param)
+
+	cmd := func() {
 		//Triangle Button
 		controller.On(joystick.SquarePress, func(data interface{}) {
-			d.Up("40")
+			in <- tello.Up
+			param <- "40"
 		})
 
 		controller.On(joystick.XPress, func(data interface{}) {
-			d.Down("40")
+			in <- tello.Down
+			param <- "40"
 		})
 
 		controller.On(joystick.CirclePress, func(data interface{}) {
-			d.RotateC("45")
+			in <- tello.RotateC
+			param <- "45"
 		})
 
 		//Square Button
 		controller.On(joystick.TrianglePress, func(data interface{}) {
-			d.RotateCC("45")
+			in <- tello.RotateCC
+			param <- "45"
 		})
 
 		controller.On(joystick.LeftX, func(data interface{}) {
 
 			switch inData := data.(int16); {
 			case inData < -11000: //Left
-				d.Left("50")
+				in <- tello.Left
+				param <- "1"
 				time.Sleep(15)
 			case inData > 11000: // Right
-				d.Right("50")
+				in <- tello.Right
+				param <- "1"
 				time.Sleep(15)
 			}
 		})
@@ -54,10 +64,12 @@ func BindController(d *tello.Drone) Controller {
 			switch inData := data.(int16); {
 
 			case inData < -11000: //Up
-				d.Forward("50")
+				in <- tello.Up
+				param <- "1"
 				time.Sleep(15)
 			case inData > 11000: //Down
-				d.Back("50")
+				in <- tello.Down
+				param <- "1"
 				time.Sleep(15)
 			}
 		})
@@ -66,17 +78,20 @@ func BindController(d *tello.Drone) Controller {
 
 			switch inData := data.(int16); {
 			case inData < -32600: //Up
-				d.TakekOff()
+				in <- tello.Takeoff
+				param <- ""
 				time.Sleep(2 * time.Second)
 			case inData > 32600: //Down
-				d.Land()
+				in <- tello.Land
+				param <- "1"
 			}
 		})
 
 		controller.On(joystick.R2, func(data interface{}) {
 			inData := data.(int16)
 			if inData > 32700 {
-				d.GetBattery()
+				in <- tello.Battery
+				param <- ""
 				time.Sleep(15)
 			}
 		})

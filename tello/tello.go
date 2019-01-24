@@ -100,6 +100,9 @@ const (
 
 	//TOF command gets distance value from TOF
 	TOF Command = 28
+
+	//STOP command ends the drone input loop
+	STOP Command = -1
 )
 
 //Drone structure that represents the drone
@@ -202,13 +205,11 @@ func (d Drone) doCommand(cmd Command, param string) {
 	}
 }
 
-func sendCommand(cmd string, cn net.Conn) (string, error) {
+func sendCommand(cmd string, cn net.Conn) {
 	_, err := fmt.Fprintf(cn, cmd)
 	if err != nil {
-		return "error", fmt.Errorf("couldn't send command because %s", err)
+		fmt.Println("error: ", err)
 	}
-	go HandleResponse(cn)
-	return cmd, nil
 }
 
 // HandleResponse prints to the console the result of the command (ok, err [drone], err [reader])
@@ -221,9 +222,12 @@ func HandleResponse(c net.Conn) {
 	fmt.Println(string(p))
 }
 
-func (d Drone) CommandQueue(in chan Command, param string) {
+//InputChan executes the command and response rutines
+func (d Drone) InputChan(inCh chan Command, paramCh chan string) {
 	for {
-		cmd := <-in
-		d.doCommand(cmd, param)
+		cmd := <-inCh
+		param := <-paramCh
+		go d.doCommand(cmd, param)
+		go HandleResponse(d.cmdConn)
 	}
 }
