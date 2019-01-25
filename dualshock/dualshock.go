@@ -45,10 +45,10 @@ func BindController(d *tello.Drone) Controller {
 
 			switch inData := data.(int16); {
 			case inData < -11000: //Left
-				out <- tello.Package{Cmd: tello.Left, Param: "10"}
+				out <- tello.Package{Cmd: tello.Left, Param: "20"}
 				time.Sleep(15)
 			case inData > 11000: // Right
-				out <- tello.Package{Cmd: tello.Right, Param: "10"}
+				out <- tello.Package{Cmd: tello.Right, Param: "20"}
 				time.Sleep(15)
 			}
 		})
@@ -57,10 +57,10 @@ func BindController(d *tello.Drone) Controller {
 
 			switch inData := data.(int16); {
 			case inData < -11000: //Up
-				out <- tello.Package{Cmd: tello.Forward, Param: "10"}
+				out <- tello.Package{Cmd: tello.Forward, Param: "20"}
 				time.Sleep(15)
 			case inData > 11000: //Down
-				out <- tello.Package{Cmd: tello.Back, Param: "10"}
+				out <- tello.Package{Cmd: tello.Back, Param: "20"}
 				time.Sleep(15)
 			}
 		})
