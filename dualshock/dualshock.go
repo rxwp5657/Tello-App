@@ -19,57 +19,48 @@ func BindController(d *tello.Drone) Controller {
 	adapter := joystick.NewAdaptor()
 	controller := joystick.NewDriver(adapter, "dualshock4")
 
-	in := make(chan tello.Command)
-	param := make(chan string)
-	go d.InputChan(in, param)
+	out := make(chan tello.Package, 10)
+	go d.InputChan(out)
 
 	cmd := func() {
 		//Triangle Button
 		controller.On(joystick.SquarePress, func(data interface{}) {
-			in <- tello.Up
-			param <- "40"
+			out <- tello.Package{Cmd: tello.Up, Param: "40"}
 		})
 
 		controller.On(joystick.XPress, func(data interface{}) {
-			in <- tello.Down
-			param <- "40"
+			out <- tello.Package{Cmd: tello.Down, Param: "40"}
 		})
 
 		controller.On(joystick.CirclePress, func(data interface{}) {
-			in <- tello.RotateC
-			param <- "45"
+			out <- tello.Package{Cmd: tello.RotateC, Param: "45"}
 		})
 
 		//Square Button
 		controller.On(joystick.TrianglePress, func(data interface{}) {
-			in <- tello.RotateCC
-			param <- "45"
+			out <- tello.Package{Cmd: tello.RotateCC, Param: "45"}
 		})
 
 		controller.On(joystick.LeftX, func(data interface{}) {
 
 			switch inData := data.(int16); {
 			case inData < -11000: //Left
-				in <- tello.Left
-				param <- "1"
+				out <- tello.Package{Cmd: tello.Left, Param: "10"}
 				time.Sleep(15)
 			case inData > 11000: // Right
-				in <- tello.Right
-				param <- "1"
+				out <- tello.Package{Cmd: tello.Right, Param: "10"}
 				time.Sleep(15)
 			}
 		})
 
 		controller.On(joystick.LeftY, func(data interface{}) {
-			switch inData := data.(int16); {
 
+			switch inData := data.(int16); {
 			case inData < -11000: //Up
-				in <- tello.Up
-				param <- "1"
+				out <- tello.Package{Cmd: tello.Forward, Param: "10"}
 				time.Sleep(15)
 			case inData > 11000: //Down
-				in <- tello.Down
-				param <- "1"
+				out <- tello.Package{Cmd: tello.Back, Param: "10"}
 				time.Sleep(15)
 			}
 		})
@@ -78,20 +69,17 @@ func BindController(d *tello.Drone) Controller {
 
 			switch inData := data.(int16); {
 			case inData < -32600: //Up
-				in <- tello.Takeoff
-				param <- ""
-				time.Sleep(2 * time.Second)
+				out <- tello.Package{Cmd: tello.Takeoff, Param: ""}
+				time.Sleep(30)
 			case inData > 32600: //Down
-				in <- tello.Land
-				param <- "1"
+				out <- tello.Package{Cmd: tello.Land, Param: ""}
 			}
 		})
 
 		controller.On(joystick.R2, func(data interface{}) {
 			inData := data.(int16)
 			if inData > 32700 {
-				in <- tello.Battery
-				param <- ""
+				out <- tello.Package{Cmd: tello.Battery, Param: ""}
 				time.Sleep(15)
 			}
 		})

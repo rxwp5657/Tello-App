@@ -105,6 +105,12 @@ const (
 	STOP Command = -1
 )
 
+//Package has the data to be sent avoiding param or command overhead
+type Package struct {
+	Cmd   Command
+	Param string
+}
+
 //Drone structure that represents the drone
 type Drone struct {
 	cmdConn net.Conn
@@ -163,7 +169,7 @@ func (d Drone) doCommand(cmd Command, param string) {
 	case Left:
 		sendCommand("left "+param, d.cmdConn)
 	case Right:
-		sendCommand("rigth "+param, d.cmdConn)
+		sendCommand("right "+param, d.cmdConn)
 	case Forward:
 		sendCommand("forward "+param, d.cmdConn)
 	case Back:
@@ -183,7 +189,7 @@ func (d Drone) doCommand(cmd Command, param string) {
 	case Speed:
 		sendCommand("speed?", d.cmdConn)
 	case Battery:
-		sendCommand("battery", d.cmdConn)
+		sendCommand("battery?", d.cmdConn)
 	case Time:
 		sendCommand("time?", d.cmdConn)
 	case WiFi:
@@ -223,11 +229,10 @@ func HandleResponse(c net.Conn) {
 }
 
 //InputChan executes the command and response rutines
-func (d Drone) InputChan(inCh chan Command, paramCh chan string) {
+func (d Drone) InputChan(in chan Package) {
 	for {
-		cmd := <-inCh
-		param := <-paramCh
-		go d.doCommand(cmd, param)
+		cmd := <-in
+		go d.doCommand(cmd.Cmd, cmd.Param)
 		go HandleResponse(d.cmdConn)
 	}
 }

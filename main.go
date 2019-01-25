@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/RXWP5657/DroneProject/Tello-App/dualshock"
 	"github.com/RXWP5657/DroneProject/Tello-App/tello"
-	"github.com/RXWP5657DroneProject/Tello-App/dualshock"
 )
 
 func main() {
